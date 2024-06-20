@@ -1,0 +1,256 @@
+import tkinter as tk
+from tkinter import messagebox
+import math
+import random
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+#main________________________________
+# Функция для расчета и отображения гистограммы
+def calculate_and_plot():
+    try:
+        clear_plot()  # Очищаем предыдущий график перед построением нового
+
+        Kol_el = int(entry_num_electrons.get())
+        Te = float(entry_initial_temp.get())
+        a = float(entry_width.get())
+        b = float(entry_length.get())
+        c = float(entry_height.get())
+
+        if Kol_el <= 0 or Te <= 0 or a <= 0 or b <= 0 or c <= 0:
+            raise ValueError
+
+        e = -1.6e-19
+        P = 133  # электрическое поле
+        Ta = 300  #
+        kB = 1.381e-23  # постоянная Больцмана
+        m = 9.1e-31  # масса электрона, кг
+        M = 39.948 * 1.66e-27  # масса атома аргона
+        N = 1.7839  # плотность газа
+        v = np.sqrt(8 * kB * Te / np.pi / m)  # скорость электрона
+        E = 1000  # энергия электрона
+        E_i = 15.76  # энергия ионизации
+        E_a = 11.6  # Энергия ионизации аргона
+        m_a = 39.948 * 1.66 * e - 27
+        Nm = 1e+17
+        speeds = []
+        Mup = np.array([
+            [0.000000e+0, 7.920000e-20],
+            [3.000000e-3, 5.744000e-20],
+            [6.000000e-3, 4.996000e-20],
+            [1.000000e-2, 4.316000e-20],
+            [1.200000e-2, 4.047000e-20],
+            [1.400000e-2, 3.809000e-20],
+            [1.700000e-2, 3.498000e-20],
+            [2.000000e-2, 3.229000e-20],
+            [2.500000e-2, 2.818000e-20],
+            [3.000000e-2, 2.532000e-20],
+            [3.500000e-2, 2.261000e-20],
+            [4.000000e-2, 2.029000e-20],
+            [5.000000e-2, 1.647000e-20],
+            [6.000000e-2, 1.347000e-20],
+            [7.000000e-2, 1.108000e-20],
+            [8.000000e-2, 9.128000e-21],
+            [9.000000e-2, 7.519000e-21],
+            [1.000000e-1, 6.211000e-21],
+            [1.100000e-1, 5.119000e-21],
+            [1.200000e-1, 4.218000e-21],
+            [1.300000e-1, 3.498000e-21],
+            [1.400000e-1, 2.858000e-21],
+            [1.500000e-1, 2.346000e-21],
+            [1.700000e-1, 1.624000e-21],
+            [1.800000e-1, 1.368000e-21],
+            [1.900000e-1, 1.171000e-21],
+            [2.000000e-1, 1.035000e-21],
+            [2.100000e-1, 9.410000e-22],
+            [2.200000e-1, 8.860000e-22],
+            [2.300000e-1, 8.670000e-22],
+            [2.400000e-1, 8.780000e-22],
+            [2.500000e-1, 9.170000e-22],
+            [2.600000e-1, 9.780000e-22],
+            [2.700000e-1, 1.060000e-21],
+            [2.800000e-1, 1.161000e-21],
+            [3.000000e-1, 1.406000e-21],
+            [3.500000e-1, 2.206000e-21],
+            [4.000000e-1, 3.152000e-21],
+            [5.000000e-1, 5.169000e-21],
+            [7.000000e-1, 8.956000e-21],
+            [8.000000e-1, 1.068000e-20],
+            [1.000000e+0, 1.403000e-20],
+            [1.200000e+0, 1.660000e-20],
+            [1.500000e+0, 2.050000e-20],
+            [1.700000e+0, 2.330000e-20],
+            [2.000000e+0, 2.700000e-20],
+            [2.500000e+0, 3.430000e-20],
+            [3.000000e+0, 4.100000e-20],
+            [4.000000e+0, 5.400000e-20],
+            [5.000000e+0, 7.000000e-20],
+            [6.000000e+0, 8.600000e-20],
+            [7.000000e+0, 1.020000e-19],
+            [8.000000e+0, 1.230000e-19],
+            [1.000000e+1, 1.580000e-19],
+            [1.200000e+1, 1.650000e-19],
+            [1.700000e+1, 1.310000e-19],
+            [2.000000e+1, 1.150000e-19],
+            [2.500000e+1, 9.000000e-20],
+            [3.000000e+1, 7.200000e-20],
+            [7.500000e+1, 3.500000e-20]
+        ])  # массив сечений
+
+        Mup_speed_column = Mup[:, 0]  # массив скоростей
+        Mup_energy_column = Mup[:, 1]  # массив энергий
+        Sig_max = max(Mup_energy_column)
+
+        k = 0
+        while k < Kol_el:
+            x0 = random.uniform(0, 1) * a
+            y0 = random.uniform(0, 1) * b
+            z0 = 0
+            xk, yk, zk = 0, 0, 0
+            iter = 0
+            ug = 0
+            while xk < a and yk < b and zk < c and (xk > -a and yk > -b and zk > -c):
+                if (iter == 0):
+                    V0 = math.sqrt((8 * kB * 4.80654e-19) / (math.pi * m))
+                    Na = P / (kB * Ta)
+                    V_tot = Nm * V0 * (Sig_max + Sig_max)
+                    E_el = ((m * v ** 2) / 2) / 1.60219e-19
+                    iter = 1
+                S = random.uniform(0, 1)
+                T_flight = -math.log(S) / V_tot  # Время свободного полета
+                xk = x0 + V0 * T_flight + 0.5 * (e * P / m) * T_flight ** 2
+                yk = y0 + V0 * T_flight
+                zk = z0 + V0 * T_flight
+                Vx = V0 + (e * P / m) * T_flight
+                Vy = V0
+                Vz = V0
+                V_modul = math.sqrt(Vx ** 2 + Vy ** 2 + Vz ** 2)  # V модуль
+                index = np.abs(Mup_energy_column - E_el).argmin()
+                sig1 = Mup[index, 1]
+                V_2 = Nm * V_modul * sig1
+                V_new = V_tot * 0.8
+                if (V_new > V_tot):
+                    break
+                V_ud = V_new / 2 / V_tot
+                V_ud2 = (V_new / 2 / V_tot) * 2
+                if (ug != 1):
+                    if (Vy > 0 and Vx > 0):
+                        fhi = math.pi - math.atan(Vy / Vx)
+                    elif (Vy > 0 and Vx < 0):
+                        fhi = math.atan(Vy / Vx)
+                    elif (Vx > 0 and Vy < 0):
+                        fhi = math.pi + math.atan(Vy / Vx)
+                    elif (Vx < 0 and Vy < 0):
+                        fhi = 2 * math.pi - math.atan(Vy / Vx)
+                    if (Vz > 0):
+                        tetha = math.pi / 2 + math.atan(Vz / math.sqrt(Vx ** 2 + Vy ** 2))
+                    elif (Vx == 0 and Vy > 0):
+                        tetha == math.pi / 2
+                    elif (Vz < 0):
+                        tetha = -math.pi / 2
+                xk1 = xk * (-math.cos(tetha)) + z0 * math.sin(tetha)
+                yk1 = yk * math.sin(tetha) * math.sin(fhi)
+                zk1 = zk * math.sin(tetha) + z0 * (-math.cos(tetha))
+                xk = xk1 * (-math.cos(fhi)) + yk1 * (-math.sin(fhi))
+                yk = xk1 * (math.sin(fhi)) + yk1 * (-math.cos(fhi))
+                zk = V_modul * (-math.sin(tetha)) * math.cos(fhi) * math.sin(tetha) + math.cos(tetha)
+                # ---------------Столкновение--------------
+                if (S > 0 and S < V_ud):  # Упругое столкновение
+                    V_modul = V_modul
+                elif (S > V_ud and S < V_ud2):
+                    U1 = math.sqrt((8 * kB * 4.80654e-19) / (math.pi * M))
+                    V1 = V_modul - U1
+                    if (V1 < 0):
+                        V1 *= -1
+                    U2 = math.sqrt(V1 ** 2 + 2 / (m * M / (m + M)) * 11.6)
+                    V = (m * V_modul + M * U1) / (m + M) + U2 * M / (m + m)
+                    U = (m * V_modul + M * U1) / (m + M) + U2 * (m / (m + M))
+                    fhi = random.uniform(0, 2 * math.pi)
+                    tetha = random.uniform(-math.pi / 2, math.pi / 2)
+                    ug = 1
+            speeds.append(V_modul)
+            V_tot = V_new
+            k += 1
+
+        min_speed = min(speeds)
+        max_speed = max(speeds)
+
+        # Определение количества столбцов
+        num_bins = k
+
+        # Создание равномерных интервалов
+        bins = np.linspace(min_speed, max_speed, num_bins + 1)
+
+        # Подсчет гистограммы
+        counts, _ = np.histogram(speeds, bins)
+
+        # Построение гистограммы
+        fig, ax = plt.subplots(figsize=(8, 6))
+        width = bins[1] - bins[0]  # ширина столбца
+        ax.bar(bins[:-1], counts, width=width, edgecolor='black', align='edge')
+
+        # Подписи для столбцов
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        for count, bin_center in zip(counts, bin_centers):
+            if count > 0:
+                ax.text(bin_center, count, str(int(count)), ha='center', va='bottom')
+
+        # Настройка осей
+        ax.set_xlim(min_speed, max_speed)
+        ax.set_xlabel('Скорость электронов (м/с)')
+        ax.set_ylabel('Количество электронов')
+        ax.set_title('Гистограмма скоростей электронов')
+        ax.grid(True)
+
+        # Отображение графика на Canvas
+        canvas = FigureCanvasTkAgg(fig, master=right_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+    except ValueError:
+        messagebox.showerror("Ошибка ввода", "Введите корректные значения для количества электронов, температуры и размеров области")
+
+
+# Функция для очистки графика
+def clear_plot():
+    for widget in right_frame.winfo_children():
+        widget.destroy()
+
+
+# Создание основного окна
+root = tk.Tk()
+root.title("Расчет скоростей электронов")
+root.geometry("1200x600")
+
+# Создание фреймов
+left_frame = tk.Frame(root, width=300, padx=10, pady=10)
+left_frame.pack(side=tk.LEFT, fill=tk.Y)
+
+right_frame = tk.Frame(root, padx=10, pady=10)
+right_frame.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH)
+
+# Создание и размещение виджетов в левом фрейме
+tk.Label(left_frame, text="Количество электронов:").grid(row=0, column=0, padx=10, pady=5, sticky='w')
+entry_num_electrons = tk.Entry(left_frame)
+entry_num_electrons.grid(row=0, column=1, padx=10, pady=5)
+
+tk.Label(left_frame, text="Начальная температура :").grid(row=1, column=0, padx=10, pady=5, sticky='w')
+entry_initial_temp = tk.Entry(left_frame)
+entry_initial_temp.grid(row=1, column=1, padx=10, pady=5)
+
+tk.Label(left_frame, text="Ширина области (м):").grid(row=2, column=0, padx=10, pady=5, sticky='w')
+entry_width = tk.Entry(left_frame)
+entry_width.grid(row=2, column=1, padx=10, pady=5)
+
+tk.Label(left_frame, text="Длина области (м):").grid(row=3, column=0, padx=10, pady=5, sticky='w')
+entry_length = tk.Entry(left_frame)
+entry_length.grid(row=3, column=1, padx=10, pady=5)
+
+tk.Label(left_frame, text="Высота области (м):").grid(row=4, column=0, padx=10, pady=5, sticky='w')
+entry_height = tk.Entry(left_frame)
+entry_height.grid(row=4, column=1, padx=10, pady=5)
+
+tk.Button(left_frame, text="Рассчитать", command=calculate_and_plot).grid(row=5, column=0, columnspan=2, padx=10, pady=20)
+tk.Button(left_frame, text="Очистить", command=clear_plot).grid(row=6, column=0, columnspan=2, padx=10, pady=5)
+
+root.mainloop()
